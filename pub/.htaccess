@@ -1,0 +1,66 @@
+Options -Indexes +FollowSymLinks -MultiViews
+
+Order deny,allow
+<FilesMatch "\.(yml|twig)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<IfModule mod_dir.c>
+    DirectoryIndex index.php
+</IfModule>
+
+<IfModule mod_security.c>
+    SecFilterEngine Off
+    SecFilterScanPOST Off
+    SecRule &REQUEST_HEADERS:Proxy "@gt 0"
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresDefault "access plus 1 months"
+</IfModule>
+
+<IfModule mod_header.c>
+    Header unset If-Modified-Since
+    Header unset If-None-Match
+    Header unset ETag
+    FileETag None
+    RequestHeader unset Proxy early
+</IfModule>
+
+<IfModule mod_php.c>
+    php_value display_errors 1
+    php_value error_reporting E_ALL
+
+    php_value output_buffering Off
+    php_value zlib.output_compression Off
+
+    # php_value memory_limit 2G
+    php_value upload_max_filesize 40M
+    php_value post_max_size 40M
+
+    # 30 days for remember_me feature
+    php_value session.gc_maxlifetime 2592000
+    php_value session.gc_divisor 100
+    php_value session.gc_probability 1
+</IfModule>
+
+<IfModule mod_rewrite.c>
+    SetEnv BUCKYBALL_MOD_REWRITE On
+
+    RewriteEngine on
+
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-l
+
+    RewriteRule ^(.*)$ index.php/$1 [L]
+</IfModule>

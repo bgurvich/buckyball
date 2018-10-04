@@ -1,0 +1,12 @@
+[module]
+title = "Basic user functionality"
+version = "0.1.0"
+
+[requires]
+modules = ["Buckyball_Core"]
+
+[areas.backend]
+routing = [
+    ['^/users/?', '\Buckyball\User\']
+]
+
