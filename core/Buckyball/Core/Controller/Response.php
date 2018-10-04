@@ -1,6 +1,6 @@
 <?php
 
-namespace Buckyball\Core\App;
+namespace Buckyball\Core\Controller;
 
 use Buckyball\Core\Data\Struct;
 

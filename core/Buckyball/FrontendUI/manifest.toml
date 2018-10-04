@@ -3,25 +3,20 @@
 version = "0.1.0"
 
 [[areas.frontend.routing]]
-path = "#*"
-target = 'Buckyball\FrontendUI\Frontend\Controller\Status'
+route = "/"
+class = 'Buckyball\FrontendUI\Frontend\Controller\Home'
 
 [[areas.frontend.routing]]
-path = "/"
-target = 'Buckyball\FrontendUI\Frontend\Controller\Home'
-type = "action"
+route = "/user/.action/?:id"
+class = 'Buckyball\User\Frontend\Controller\Users'
 
 [[areas.frontend.routing]]
-path = "/user/.action/?:id"
-target = 'Buckyball\User\Frontend\Controller\Users'
-type = "controller"
+#route = "^/pub/js/(.*)\.js$"
+route = "^/pub/(js|css|img)/(.*)\.(js|css|png|gif|jpg)$"
+class = "Buckyball\Core\Controller\Pub"
+root = "@Buckyball/FrontendUI/pub"
 
 [[areas.frontend.routing]]
-path = "/pub"
-target = "@Buckyball/FrontendUI/pub"
-type = "pub"
-
-[[areas.frontend.routing]]
-path = "/*page"
-target = "@Buckyball/FrontendUI/views/static"
-type = "proxy"
+route = "/*page"
+target = "Buckyball\Core\Controller\Pub"
+root = "@Buckyball/FrontendUI/views/static"

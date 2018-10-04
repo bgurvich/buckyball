@@ -2,20 +2,38 @@
 
 namespace Buckyball\Core;
 
+use Buckyball\Core\App\Config;
+use Buckyball\Core\App\Env;
 use Buckyball\Core\App\Module;
+use Buckyball\Core\App\Request;
+use Buckyball\Core\App\Response;
+use Buckyball\Core\App\Session;
 use Buckyball\Core\Data\Struct;
 use Buckyball\Core\Iface\App\Area;
 use Buckyball\Core\Proto\Cls;
+use Buckyball\Core\Util\Arr;
+use Buckyball\Core\Util\Email;
+use Buckyball\Core\Util\Http;
+use Buckyball\Core\Util\Str;
 
-class App extends Cls implements \Buckyball\Core\Iface\App
+spl_autoload_register(function ($class) {
+    $file = dirname(dirname(__DIR__)) . '/' . strtr($class, ['\\' => '/']) . '.php';
+    if (file_exists($file)) {
+        include $file;
+        return true;
+    }
+    return false;
+});
+
+class App extends Cls implements Iface\App
 {
     /**
-     * @var Struct
+     * @var Env
      */
     protected $env;
 
     /**
-     * @var Struct
+     * @var Config
      */
     protected $config;
 
@@ -35,47 +53,58 @@ class App extends Cls implements \Buckyball\Core\Iface\App
     protected $area;
 
     /**
+     * @var Request
+     */
+    protected $request;
+
+    /**
+     * @var Response
+     */
+    protected $response;
+
+    /**
+     * @var Session
+     */
+    protected $session;
+
+    /**
+     * @var Email
+     */
+    protected $email;
+
+    /**
+     * @var Http
+     */
+    protected $http;
+
+    /**
+     * @var Str
+     */
+    protected $str;
+
+    /**
+     * @var Arr
+     */
+    protected $arr;
+
+    /**
      * App constructor.
      * @param $env
      */
     public function __construct($env)
     {
-        $initEnv = [
-            'SERVER' => $_SERVER,
-            'GET' => $_GET,
-            'POST' => $_POST,
-            'REQUEST' => $_REQUEST,
-            'COOKIE' => $_COOKIE,
-        ];
+        foreach (['core', 'local'] as $d) {
+            $this->autoload($this->env->get('root_dir') . '/' . $d);
+        }
 
-        $rootDir = dirname(dirname(dirname(__DIR__)));
-        $initEnv['fs'] = [
-            'root_dir' => $rootDir,
-            'pub_dir' => "{$rootDir}/pub",
-            'var_dir' => "{$rootDir}/var",
-            'config_dir' => "{$rootDir}/var/config",
-            'cache_dir' => "{$rootDir}/var/cache",
-            'code_dirs' => ["{$rootDir}/core", "{$rootDir}/local"],
-        ];
+        $this->env = $this->getInstance(Env::class, [$env]);
+        $this->request = $this->getInstance(Request::class)->fromEnv($this->env);
+        $this->session = $this->getInstance(Session::class);
 
-        $server = $initEnv['SERVER'];
-        $s = $server['HTTPS'] ? 's' : '';
-        $host = $server['HTTP_HOST'] ?? null;
-        $scriptName = $server['SCRIPT_NAME'] ?? null;
-        $basePath = dirname($scriptName);
-
-        $initEnv['areas'] = [
-            'frontend' => [
-                'url_prefix' => "http{$s}://{$host}{$scriptName}/",
-                'root_path' => $basePath,
-            ],
-            'backend' => [
-                'url_prefix' => "http{$s}://{$host}{$scriptName}/admin/",
-                'root_path' => "{$basePath}/admin/",
-            ],
-        ];
-        $this->env = $this->getInstance(Struct::class, [$initEnv]);
-        $this->env->merge($env);
+        $this->email = $this->getSingleton(Email::class);
+        $this->http = $this->getSingleton(Http::class);
+        $this->str = $this->getSingleton(Str::class);
+        $this->arr = $this->getSingleton(Arr::class);
     }
 
     /**
@@ -134,9 +163,6 @@ class App extends Cls implements \Buckyball\Core\Iface\App
      */
     public function run(string $areaClass): Area
     {
-        ini_set('display_errors', 1);
-        display_errors(E_ALL);
-
         $this->bootstrap();
         $area = $this->getSingleton($areaClass);
         $area->processRequest();
@@ -145,24 +171,28 @@ class App extends Cls implements \Buckyball\Core\Iface\App
 
     public function bootstrap(?string $areaClass = null): self
     {
+        $this->session()->start();
+
         $this->loadLibs();
 
         foreach (['core', 'db', 'local'] as $f) {
             $this->loadConfig("{$this->env->get('config_dir')}/{$f}.php");
         }
 
-        foreach (['core', 'local'] as $d) {
-            spl_autoload_register(function ($class) use ($d) {
-                $file = $this->env->get('root_dir') . '/' . $d . '/' . strtr($class, ['\\' => '/']) . '.php';
-                if (file_exists($file)) {
-                    include $file;
-                    return true;
-                }
-                return false;
-            });
-        }
-
         $this->bootstrapModules();
+    }
+
+    public function autoload(string $dir): self
+    {
+        spl_autoload_register(function ($class) use ($dir) {
+            $file = $dir . '/' . strtr($class, ['\\' => '/']) . '.php';
+            if (file_exists($file)) {
+                include $file;
+                return true;
+            }
+            return false;
+        });
+        return $this;
     }
 
     public function bootstrapModules(): self
@@ -204,6 +234,16 @@ class App extends Cls implements \Buckyball\Core\Iface\App
     {
         require_once 'lib/Toml.php';
         return $this;
+    }
+
+    public function env(): Struct
+    {
+        return $this->env;
+    }
+
+    public function config(): Struct
+    {
+        return $this->config;
     }
 
     public function __destruct()

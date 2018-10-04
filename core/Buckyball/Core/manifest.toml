@@ -3,3 +3,7 @@
 title = "Buckyball NG Core Module"
 version = "0.1.0"
 
+[[routing]]
+route = "#*"
+class = 'Buckyball\Core\Controller\Status'
+

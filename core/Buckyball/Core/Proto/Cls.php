@@ -2,7 +2,7 @@
 
 namespace Buckyball\Core\Proto;
 
-use Buckyball\Core\Iface\App;
+use Buckyball\Core\App;
 
 abstract class Cls
 {
@@ -20,6 +20,11 @@ abstract class Cls
     public function app(): App
     {
         return $this->app;
+    }
+
+    public function inst(string $class, ?array $args = []): self
+    {
+        return $this->app->getInstance($class, $args);
     }
 
     public function __destruct()
